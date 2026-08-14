@@ -31,7 +31,7 @@ public class ShopTypeController {
 //        List<ShopType> typeList = typeService
 //                .query().orderByAsc("sort").list();
 
-      return typeService.orderbylist();
+      return typeService.orderbylist();//记得直接返回，不用再返回Result了！不用再套括Result了
 //        return Result.ok(typeList);
     }
 }
