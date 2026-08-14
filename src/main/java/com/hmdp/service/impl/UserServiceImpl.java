@@ -97,7 +97,7 @@ private StringRedisTemplate stringRedisTemplate;
                         .setIgnoreNullValue(true)
                         .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
 //       //法二：易懂
-//        Map<String,String> userMap=new HashMap<>();//自己new一个map，字段属性对应key，字段值对应value，位后续存储redis做准备。好用！
+//        Map<String,String> userMap=new HashMap<>();//自己new一个map，字段属性对应key，字段值对应value，为后续存储redis做准备。好用！
 //        userMap.put("id",userDTO.getId().toString());
 //        userMap.put("nickName",userDTO.getNickName());
 //        userMap.put("icon",userDTO.getIcon());

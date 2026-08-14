@@ -32,8 +32,7 @@ public RefreshTokenInterceptor(StringRedisTemplate stringRedisTemplate) {
          Map<Object, Object>  userMap=stringRedisTemplate.opsForHash().entries(key);//根据一个key获取所对应所用map集合，get只能获取一个key对应的一个map集合 Hgetall key（获得对应key的全部map）
        //3.判断用户是否存在
         if(userMap.isEmpty()){
-            //4.不存在，拦截
-            return true;
+            return true;//不要拦截，因为用户可以不登录观看商铺信息，由于是全部拦截的请求，所以不能返回错误，只能返回true
         }
         //5.将查询到的用户数据转为UserDTO对象
       UserDTO userDTO =  BeanUtil.fillBeanWithMap(userMap,new UserDTO(), false);
