@@ -9,10 +9,14 @@ import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
+import java.util.concurrent.TimeUnit;
+
 import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 
 /**
  * <p>
@@ -44,8 +48,21 @@ return Result.ok(shop);}
             return Result.fail("店铺不存在");
         }
         //6.数据库存在，则写入redis，后返回。
-       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop));//将shop对象转为json字符串
+       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL, TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
 
         return Result.ok(shop);
+    }
+    @Transactional//事务回滚，保证acid 特性
+    @Override
+    public Result update(Shop shop) {
+        Long id = shop.getId();
+        if (id == null){
+            return Result.fail("店铺id不能为空");
+        }
+    //1.更新数据库
+        updateById( shop);
+        //2.删除redis缓存
+        stringRedisTemplate.delete(CACHE_SHOP_KEY+shop.getId());
+        return Result.ok();
     }
 }
