@@ -13,10 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
-import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
+import static com.hmdp.utils.RedisConstants.*;
 
 /**
  * <p>
@@ -41,14 +42,20 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //3.存在，则返回
         Shop shop=    JSONUtil.toBean(shopJson,Shop.class);//这是将字符串转为对象，若是对象转对象用 UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);//将user对象转为UserDTO对象
 return Result.ok(shop);}
+        //判断命中的是否是空值
+        if ( shopJson != null){
+            return Result.fail("店铺不存在");
+        }
         //4.不存在，则根据id查询数据库
             Shop shop = this.getById(id);//java对象
         if ( shop == null){
+            //将空值写入redis，防止缓存穿透
+            stringRedisTemplate.opsForValue().set(Key,"",CACHE_NULL_TTL, TimeUnit.MINUTES);
             //5.数据库不存在，则返回错误
             return Result.fail("店铺不存在");
         }
-        //6.数据库存在，则写入redis，后返回。
-       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL, TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
+        //6.数据库存在，则写入redis，后返回。添加随机时间防止缓存雪崩.
+       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL+ ThreadLocalRandom.current().nextInt(1,6), TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
 
         return Result.ok(shop);
     }

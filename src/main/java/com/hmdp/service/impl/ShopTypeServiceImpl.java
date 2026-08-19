@@ -37,7 +37,7 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
     public Result orderbylist() {//店铺商单redis缓存
         String key=CACHE_SHOP_KEY;
         //1.查询redis是否有缓存
-    List<String> shopTypes = stringRedisTemplate.opsForList().range(key,0, -1);
+    List<String> shopTypes = stringRedisTemplate.opsForList().range(key,0, -1);//查询redis中的list集合
         List<ShopType> shopTypes1=new ArrayList<>();
     if (CollectionUtil.isNotEmpty(shopTypes)){
         //2.有缓存，直接返回
