@@ -54,8 +54,8 @@ return Result.ok(shop);}
             //5.数据库不存在，则返回错误
             return Result.fail("店铺不存在");
         }
-        //6.数据库存在，则写入redis，后返回。添加随机时间防止缓存雪崩.
-       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL+ ThreadLocalRandom.current().nextInt(1,6), TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
+        //6.数据库存在，则写入redis，后返回。添加随机时间防止缓存雪崩.使用ThreadLocalRandom，不要用Random，多线程环境性能更好。需要导入java.util.concurrent.ThreadLocalRandom
+       stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL+ ThreadLocalRandom.current().nextLong(1,6), TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
 
         return Result.ok(shop);
     }
