@@ -1,5 +1,6 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.hmdp.dto.Result;
@@ -58,6 +59,16 @@ return Result.ok(shop);}
        stringRedisTemplate.opsForValue().set(Key,JSONUtil.toJsonStr(shop),LOGIN_USER_TTL+ ThreadLocalRandom.current().nextLong(1,6), TimeUnit.MINUTES);//将shop对象转为json字符串存入redis中，期限30分钟保证缓存一致性。
 
         return Result.ok(shop);
+    }
+    //实现互斥锁
+    //1.尝试获取锁,用的是redis的String数据结构的setnx命令
+    private boolean tryLock(String key){
+        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1");//这个Boolean是包装类
+        return BooleanUtil.isTrue(flag);//需要把flag转为基本类型,进行判断flag是否为true,直接返回可能会报null，自动拆箱.
+    }
+    //2.释放锁
+    private void unLock(String key){
+        stringRedisTemplate.delete(key);
     }
     @Transactional//事务回滚，保证acid 特性
     @Override
