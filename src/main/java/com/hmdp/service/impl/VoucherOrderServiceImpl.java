@@ -55,7 +55,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
         Long userId = UserHolder.getUser().getId();
         //给每个客户分配唯一锁,实现一人一单
-        synchronized (userId.toString().intern()) {//锁对象控制的代码块,黑马一人一单的讲解底层
+        synchronized (userId.toString().intern()) {//锁对象控制的代码块,黑马一人一单的讲解底层(悲观锁实现一人一单)
             IVoucherOrderService  proxy = (IVoucherOrderService) AopContext.currentProxy();//获取当前代理对象，也就是接口类IVoucherOrderService的代理对象(接口类的作用之一)
             return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)默认是当前对象调用(this(也就是voucherOrderserviceImpl)),而当前对象调用会造成事务失效。
         }//给每个用户分配唯一锁
