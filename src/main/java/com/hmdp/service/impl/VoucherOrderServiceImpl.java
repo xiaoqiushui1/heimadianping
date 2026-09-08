@@ -32,7 +32,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Override
     @Transactional
     public Result seckillVoucher(Long voucherId) {
-
         //优惠卷秒杀下单
         //1.根据前端传递id查询数据库是否有此秒杀卷
         SeckillVoucher voucherOrder=seckillVoucherService.getById(voucherId);
@@ -52,27 +51,35 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             //库存不足
             return Result.fail("库存不足");
         }
-        //2.3库存充足扣除库存，更新数据库
-       Boolean  sw1= seckillVoucherService.update().setSql("stock=stock-1").eq("voucher_id",voucherId).update();
-        //2.4不充足报错
+        //2.3实现一人一单功能（秒杀卷业务）
+        //2.3.1获取用户id
+        Long userId=UserHolder.getUser().getId();
+        //2.3.2 判断用户是否已经购买过
+        int count=query().eq("user_id",userId).eq("voucher_id",voucherId).count();//统计数量
+        if(count>0){
+            //说明用户已经购买过
+            return Result.fail("您已经购买过一次,不能继续购买");
+        }
+        //3.3库存充足扣除库存，更新数据库
+       boolean sw1= seckillVoucherService.update()
+               .setSql("stock=stock-1")
+               .eq("voucher_id",voucherId) //where id = ? and stock >0
+               .gt("stock",0).update(); //gt:greater than
+        //3.4不充足报错
         if(!sw1){
             return Result.fail("库存不足");
         }
-        //3.创建订单，返回订单id
+        //4.创建订单，返回订单id
         VoucherOrder voucherOrder1=new VoucherOrder();
         //6.1订单id（用全局唯一生成器）
         long orderid= redisIdWorker.nextId("order");
         voucherOrder1.setId(orderid);
-        //6.2用户id
-        Long userId=UserHolder.getUser().getId();
+        //6.2保存用户id
         voucherOrder1.setUserId(userId);
         //6.3代金卷id
         voucherOrder1.setVoucherId(voucherId);
         //7保存订单到数据库
         save(voucherOrder1);
-
-
-
         return Result.ok(orderid);
     }
 }
