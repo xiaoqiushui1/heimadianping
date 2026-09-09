@@ -29,9 +29,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private ISeckillVoucherService seckillVoucherService;
     @Resource
-    private RedisIdWorker redisIdWorker;
-
-
+    private RedisIdWorker redisIdWorker;//创建id生成器对象
     @Override
     public Result seckillVoucher(Long voucherId) {
         //优惠卷秒杀下单
@@ -52,14 +50,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             //库存不足
             return Result.fail("库存不足");
         }
-
         Long userId = UserHolder.getUser().getId();
         //给每个客户分配唯一锁,实现一人一单
         synchronized (userId.toString().intern()) {//锁对象控制的代码块,黑马一人一单的讲解底层(悲观锁实现一人一单)
-            IVoucherOrderService  proxy = (IVoucherOrderService) AopContext.currentProxy();//获取当前代理对象，也就是接口类IVoucherOrderService的代理对象(接口类的作用之一)
+            IVoucherOrderService  proxy = (IVoucherOrderService) AopContext.currentProxy();//获取当前(spring生成的)代理对象，也就是接口类IVoucherOrderService的代理对象(接口类的作用之一)
             return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)默认是当前对象调用(this(也就是voucherOrderserviceImpl)),而当前对象调用会造成事务失效。
         }//给每个用户分配唯一锁
-
     }
     @Transactional
     public Result createVoucherOrder(Long voucherId) {
@@ -82,20 +78,16 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if (!success) {
             return Result.fail("库存不足");
         }
-
         //4.创建订单，返回订单id
         VoucherOrder voucherOrder1=new VoucherOrder();
-
         //6.1订单id（用全局唯一生成器）
         long orderid = redisIdWorker.nextId("order");
         voucherOrder1.setId(orderid);
-
         //6.2用户id
-        voucherOrder1.setUserId(UserHolder.getUser().getId());
-
+        Long userId1 = UserHolder.getUser().getId();
+        voucherOrder1.setUserId(userId1);
         //6.2保存用户id
         voucherOrder1.setUserId(userId);
-
         //6.3代金卷id
         voucherOrder1.setVoucherId(voucherId);
         //7保存订单到数据库
