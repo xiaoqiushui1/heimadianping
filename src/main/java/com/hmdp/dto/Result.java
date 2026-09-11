@@ -28,3 +28,4 @@ public class Result {
         return new Result(false, errorMsg, null, null);
     }
 }
+//分布式锁 set key value nx ex 10
