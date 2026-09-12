@@ -61,7 +61,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
          //   return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)默认是当前对象调用(this(也就是voucherOrderserviceImpl)),而当前对象调用会造成事务失效。
         //}//给每个用户分配唯一锁(但是多集群下会造成同一进程获取一把锁的情况（jvm的不一致）)
         //分布式锁
-        simpleRedisLock simpleRedisLock = new simpleRedisLock("order:" + userId, stringRedisTemplate);//自动注入bean对象
+        simpleRedisLock simpleRedisLock = new simpleRedisLock("order:" + userId, stringRedisTemplate);//自动注入bean对象(service类)
         //获取锁
     boolean islock= simpleRedisLock.tryLock(1200);
     if(!islock){
@@ -69,12 +69,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }
         try {
             IVoucherOrderService  proxy = (IVoucherOrderService) AopContext.currentProxy();//获取当前(spring生成的)代理对象，也就是接口类IVoucherOrderService的代理对象(接口类的作用之一)
-            return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)默
+            return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)
         } finally {
             simpleRedisLock.unLock();
         }
-
-
     }
     @Transactional
     public Result createVoucherOrder(Long voucherId) {
