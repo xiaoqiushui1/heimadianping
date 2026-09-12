@@ -34,9 +34,9 @@ static {
 //        //获取线程标识
 //        String threadId=ID_PREFIX+Thread.currentThread().getId();//示例：671d64c0ebb84883b87797846648ef77-431
 //        String id = stringRedisTemplate.opsForValue().get(KEY_PREFIX+name);//看看缓存中是否存有这个锁
-//        if(threadId.equals(id)) {
-//            //释放锁
-//            stringRedisTemplate.delete(KEY_PREFIX + name);(这个到最后可能会触发垃圾回收机制，从而导致锁的事务一致性失效（原子性失效）。)
+//        1.if(threadId.equals(id)) {
+//            //释放锁,这是两部操作，可能会导致jvm的垃圾回收（概率很小）。判断锁和释放锁的操作必须保证原子性
+//           2. stringRedisTemplate.delete(KEY_PREFIX + name);(这个到最后可能会触发垃圾回收机制，从而导致锁的事务一致性失效（原子性失效）。)
 //        }
 //基于lua脚本释放锁
     @Override
@@ -44,6 +44,6 @@ static {
      //调用lua脚本
   stringRedisTemplate.execute(UNLOCK_SCRIPT,
         Collections.singletonList(KEY_PREFIX + name),//生成单一集合。集合中只能有一个元素
-        ID_PREFIX+Thread.currentThread().getId());//直接一行代码进行实现，保证原子性
+        ID_PREFIX+Thread.currentThread().getId());//直接一行代码进行实现，保证判断锁逻辑与释放锁逻辑的原子性()
     }
     }
