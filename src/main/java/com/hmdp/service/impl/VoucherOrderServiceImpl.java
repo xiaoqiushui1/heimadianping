@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
 import com.hmdp.utils.simpleRedisLock;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIdWorker redisIdWorker;//创建id生成器对象
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private RedissonClient redissonClient;
     @Override
     public Result seckillVoucher(Long voucherId) {
         //优惠卷秒杀下单
@@ -61,9 +65,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
          //   return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)默认是当前对象调用(this(也就是voucherOrderserviceImpl)),而当前对象调用会造成事务失效。
         //}//给每个用户分配唯一锁(但是多集群下会造成同一进程获取一把锁的情况（jvm的不一致）)
         //分布式锁
-        simpleRedisLock simpleRedisLock = new simpleRedisLock("order:" + userId, stringRedisTemplate);//自动注入bean对象(service类)
+        //simpleRedisLock simpleRedisLock = new simpleRedisLock("order:" + userId, stringRedisTemplate);//自动注入bean对象(service类)
+        //redisson 分布式锁对象
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
         //获取锁
-    boolean islock= simpleRedisLock.tryLock(1200);
+        boolean islock= lock.tryLock();
+   // boolean islock= simpleRedisLock.tryLock(1200);
     if(!islock){
         return Result.fail("请勿重复下单");
     }
@@ -71,7 +78,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             IVoucherOrderService  proxy = (IVoucherOrderService) AopContext.currentProxy();//获取当前(spring生成的)代理对象，也就是接口类IVoucherOrderService的代理对象(接口类的作用之一)
             return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)
         } finally {
-            simpleRedisLock.unLock();
+          //  simpleRedisLock.unLock();
+            lock.unlock();
         }
     }
     @Transactional
@@ -86,7 +94,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("您已经购买过一次,不能继续购买");
         }
         //3.3库存充足扣除库存，更新数据库
-
         boolean success = seckillVoucherService.update()
                 .setSql("stock=stock-1")
                 .eq("voucher_id", voucherId) //where id = ? and stock >0
