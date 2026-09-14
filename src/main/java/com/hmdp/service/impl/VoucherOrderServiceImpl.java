@@ -9,7 +9,6 @@ import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
-import com.hmdp.utils.simpleRedisLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
@@ -45,7 +44,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         SeckillVoucher voucherOrder = seckillVoucherService.getById(voucherId);
         //2.判断秒杀是否开始
         if (voucherOrder.getBeginTime().isAfter(LocalDateTime.now())) {
-            //2.1尚未开始
+            //2.1尚未开始,则返回错误信息
             return Result.fail("尚未开始！");
         }
         //2.1.2判断秒杀是否结束
@@ -79,7 +78,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return proxy.createVoucherOrder(voucherId);//createVoucherOrder(voucherId)
         } finally {
           //  simpleRedisLock.unLock();
-            lock.unlock();
+            lock.unlock();//Redisson 释放锁
         }
     }
     @Transactional
