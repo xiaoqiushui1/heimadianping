@@ -1,5 +1,4 @@
 package com.hmdp.service.impl;
-
 import com.hmdp.dto.Result;
 import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.entity.VoucherOrder;
@@ -105,6 +104,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         voucherOrder1.setVoucherId(voucherId);
         //7保存订单到数据库
         save(voucherOrder1);
-        return Result.ok(orderid);
+        return Result.ok(orderid);//返回订单id
+
     }
 }
