@@ -63,7 +63,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
          //3.不存在，直接返回空.
             return null;
         }
-        //4.命中，需要下吧json反序列化为对象
+        //4.命中，需要把json反序列化为对象
         RedisData redisData = JSONUtil.toBean(shopJson, RedisData.class);
         JSONObject data =(JSONObject) redisData.getData();//返回的是JSONObject对象
         Shop shop = JSONUtil.toBean(data, Shop.class);
@@ -84,7 +84,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
          CACHE_REBUILD_EXECUTOR.submit(() -> {
              try {
                  //重建缓存
-                 this.saveShop2Redis(id,CACHE_SHOP_TTL);//设计逻辑时间30分钟
+                 this.saveShop2Redis(id,CACHE_SHOP_TTL);//设计逻辑时间30分钟,再次调用saveshop2redis的方法实现缓存时间的重建。
              } catch (Exception e) {
                  throw new RuntimeException(e);
              }finally {
@@ -213,7 +213,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //2.封装逻辑过期时间
       RedisData redisData=new RedisData();
       redisData.setData(shop);
-      redisData.setExpireTime(LocalDateTime.now().plusSeconds(expiresSeconds));
+      redisData.setExpireTime(LocalDateTime.now().plusSeconds(expiresSeconds));//逻辑过期时间(当前set 的时间加10s为逻辑过期时间)
       //3.写入redis
       stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY+id,JSONUtil.toJsonStr(redisData));
 
