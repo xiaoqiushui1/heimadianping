@@ -93,7 +93,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         //4.创建订单，返回订单id
         VoucherOrder voucherOrder1=new VoucherOrder();
         //6.1订单id（用全局唯一生成器）
-        long orderid = redisIdWorker.nextId("order");
+        long orderid = redisIdWorker.nextId("order");//创建id生成器对象
         voucherOrder1.setId(orderid);
         //6.2用户id
         Long userId1 = UserHolder.getUser().getId();
