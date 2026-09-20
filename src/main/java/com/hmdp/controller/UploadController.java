@@ -28,7 +28,7 @@ public class UploadController {
             image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
-            return Result.ok(fileName);
+            return Result.ok(fileName);// 返回文件名,/imgs/blogs/1/15/3110907d-e1a8-4903-96b1-47d9223cabe3.jpg返回给前端,之后blogcontrollr中用requestBody已经进行封装。
         } catch (IOException e) {
             throw new RuntimeException("文件上传失败", e);
         }
