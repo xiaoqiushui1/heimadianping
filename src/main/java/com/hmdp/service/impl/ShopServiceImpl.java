@@ -206,7 +206,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         stringRedisTemplate.delete(CACHE_SHOP_KEY+shop.getId());
         return Result.ok();
     }
-    //缓存预热
+    //缓存预热(逻辑过期时间默认商铺信息不会在缓存中被删除，若是手动在redis中删除需要再次缓存预热)
     public void saveShop2Redis(Long id,Long expiresSeconds){
         //1.查询店铺数据
         Shop shop = this.getById(id);

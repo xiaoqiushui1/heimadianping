@@ -23,9 +23,10 @@ public class UploadController {
             // 获取原始文件名称
             String originalFilename = image.getOriginalFilename();
             // 生成新文件名
-            String fileName = createNewFileName(originalFilename);
+            String fileName = createNewFileName(originalFilename);// 本地文件保存路径
             // 保存文件
-            image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
+            image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));//自动保存到nginx(前端服务器)的html的images 文件夹下,
+            // 例如：D:\heimadianping\nginx-1.18.0\html\hmdp\imgs\blogs\1/15\3110907d-e1a8-4903-96b1-47d9223cabe3.jpg
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
             return Result.ok(fileName);// 返回文件名,/imgs/blogs/1/15/3110907d-e1a8-4903-96b1-47d9223cabe3.jpg返回给前端,之后blogcontrollr中用requestBody已经进行封装。
