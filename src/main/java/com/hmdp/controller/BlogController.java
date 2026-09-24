@@ -30,7 +30,7 @@ public class BlogController {
     @Resource
     private IBlogService blogService;
     @PostMapping
-    public Result saveBlog(@RequestBody Blog blog) {
+    public Result saveBlog(@RequestBody Blog blog) {//前端已经传过文件名 已经封装到blog对象中
         // 获取登录用户
         UserDTO user = UserHolder.getUser();
         blog.setUserId(user.getId());
