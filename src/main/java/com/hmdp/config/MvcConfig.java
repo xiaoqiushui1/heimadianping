@@ -23,6 +23,7 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/shop-type/**",
                         "/upload/**",
                         "/blog/hot",
+                        "/blog/id",
                         "/user/code",
                         "/user/login"//不需要拦截的路径
                 ).order(1);//确保后执行

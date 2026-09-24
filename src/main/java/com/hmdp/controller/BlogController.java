@@ -42,7 +42,6 @@ public class BlogController {
 
     @PutMapping("/like/{id}")
     public Result likeBlog(@PathVariable("id") Long id) {
-
         return blogService.likeBlog(id);
     }
 
@@ -57,15 +56,35 @@ public class BlogController {
         List<Blog> records = page.getRecords();
         return Result.ok(records);
     }
-
+     //查询多个博文
     @GetMapping("/hot")
     public Result queryHotBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
 
         return blogService.querHotBlog(current) ;
     }
-    // 查询探店博文
+    // 查询单个探店博文
     @GetMapping("/{id}")
     public Result queryBlogById(@PathVariable("id") Long id) {
         return blogService.queryBlogById(id);
     }
+    //实现点赞排行榜（前五名依据时间顺序进行排行）
+@GetMapping("/likes/{id}")
+    public Result queryBlogLikes(@PathVariable("id") Long id) {
+        return blogService.queryBlogLikes(id);
+    }
+    // BlogController, 实现查询某个用户发布的所有博文
+    @GetMapping("/of/user")
+    public Result queryBlogByUserId(
+            @RequestParam(value = "current", defaultValue = "1") Integer current,
+            @RequestParam("id") Long id) {
+        // 根据用户查询
+        Page<Blog> page = blogService.query()
+                .eq("user_id", id).page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+        // 获取当前页数据
+        List<Blog> records = page.getRecords();//分页数据, blogs
+        return Result.ok(records);
+    }
+
+
+
 }
