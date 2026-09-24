@@ -31,13 +31,7 @@ public class BlogController {
     private IBlogService blogService;
     @PostMapping
     public Result saveBlog(@RequestBody Blog blog) {//前端已经传过文件名 已经封装到blog对象中
-        // 获取登录用户
-        UserDTO user = UserHolder.getUser();
-        blog.setUserId(user.getId());
-        // 保存探店博文
-        blogService.save(blog);
-        // 返回id
-        return Result.ok(blog.getId());
+        return blogService.saveBlog(blog);
     }
 
     @PutMapping("/like/{id}")

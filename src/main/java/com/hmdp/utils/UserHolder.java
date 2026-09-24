@@ -11,7 +11,7 @@ public class UserHolder {
 
     public static UserDTO getUser(){
         return tl.get();
-    }
+    }//获得当前线程保存的UserDTO的对象
 
     public static void removeUser(){
         tl.remove();

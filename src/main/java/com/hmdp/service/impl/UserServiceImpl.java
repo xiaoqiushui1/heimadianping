@@ -52,7 +52,7 @@ private StringRedisTemplate stringRedisTemplate;
             return Result.fail("手机号格式错误！");
         }
         //3.生成验证码
-       String code= RandomUtil.randomNumbers(6);
+       String code= RandomUtil.randomNumbers(6);//随机生成6位验证码
         //4.保存验证码到redis//set key value ex 120s（string类型）
       stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY+ phone,code,LOGIN_CODE_TTL, TimeUnit.MINUTES);
         //5.发送验证码
@@ -78,7 +78,7 @@ private StringRedisTemplate stringRedisTemplate;
             return Result.fail("验证码错误");
         }
 //        4.一致，根据手机号查询用户 select * from tb_user where phone=?
-       User user=query().eq("phone" ,phone).one();//select * from tb_user where phone=?
+       User user=query().eq("phone" ,phone).one();//select * from tb_user where phone=?//查询用户数据
 //        5.判断用户是否存在
         if (user==null) {
 //        6.不存在，创建用户并保存
@@ -88,7 +88,7 @@ private StringRedisTemplate stringRedisTemplate;
         //7.1随机生成token，作为登录令牌
        String token= UUID.randomUUID().toString( true);//不生成横划线的token（32位字符），生成36位字符
         //7.2将user对象转为Hash存储
-         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);//将user对象转为UserDTO对象
+         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);//将user对象转为UserDTO对象,防止泄露重要信息
 //        Map<String, Object> userMap =BeanUtil.beanToMap(userDTO);//reids 中token中存储的key-value（map），应为userDto有long 类型，
 //   而Stringredistemplate这个对象底层就指定了Map<String，String>，不能转为map，所以自己new一个map或者
        // 法一：

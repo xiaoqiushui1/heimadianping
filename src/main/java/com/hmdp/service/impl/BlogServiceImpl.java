@@ -8,10 +8,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Blog;
+import com.hmdp.entity.Follow;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.BlogMapper;
 import com.hmdp.service.IBlogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmdp.service.IFollowService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
@@ -25,6 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
+import static com.hmdp.utils.RedisConstants.FEED_KEY;
 
 /**
  * <p>
@@ -37,7 +40,35 @@ import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
 @Service
 public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IBlogService {
     @Resource
-    StringRedisTemplate stringRedisTemplate;
+  private StringRedisTemplate stringRedisTemplate;
+    @Resource
+   private IFollowService followService;;
+//发布和推送用户博文
+    @Override
+    public Result saveBlog(Blog blog) {
+        // 1.获取登录用户
+        UserDTO user = UserHolder.getUser();
+        blog.setUserId(user.getId());
+        // 2.保存探店博文
+       boolean isSuccess= this.save(blog);
+        //保存成功之后查询作者的粉丝列表查询之后保存到redis的sortset中
+        if (isSuccess){//也可以用事务管理
+            //3.查询语句 select * from  tb_follow where follows_user_id=?
+            List<Follow> zijifensiliebiaos = followService.query().eq("follow_user_id", user.getId()).list();
+            //推送给所有粉丝
+            for (Follow follow : zijifensiliebiaos) {
+                //4.1获取我的粉丝id
+                long followid=follow.getUserId();//getId是获取数据库设计的自增列表id，getUserid是粉丝id，而follow_UserId_Id为本次发布笔记的作者(因为是上面查询的是本次发布
+                // 笔记的所有粉丝，hence查不到粉丝所关注的其他博主最新发布的博文).
+                //4.2推送
+                String Key=FEED_KEY + followid;
+                //4.3用sortset数据结构保存
+                stringRedisTemplate.opsForZSet().add(Key,blog.getId().toString(),System.currentTimeMillis());
+            }
+        }
+        return Result.ok(blog);
+
+    }
 
     @Override
     public Result queryBlogLikes(Long id) {
@@ -145,7 +176,6 @@ if (top5 == null || top5.isEmpty()){
         blog.setIsLike(score !=null);//这个!=是运算符，最后自动生成布尔值.
 
     }
-
     private void extracted(Blog blog) {//ctrl+alt+m可以封装一个函数
         Long userId = blog.getUserId();
         User user = userService.getById(userId);

@@ -54,10 +54,10 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             //2.关注，新增数据
             Follow follow = new Follow();
             follow.setFollowUserId( followUserId);
-            follow.setUserId(userId);
+            follow.setUserId(userId);//保存博文的用户id,也就是当前登录用户的id
       boolean isSuccess=this.save(follow);//保存数据库
             if (isSuccess){
-                //把关注用户的id，放入redis的set集合当中 sadd userId followUserId
+                //把关注用户的id，放入redis的set集合当中 sadd userId followUserId_userId=userId(这次要查寻当前登录用户的id有谁关注，也就是当前博文作者的粉丝有谁)
         stringRedisTemplate.opsForSet().add(Key,followUserId.toString());
             }
         } else {
