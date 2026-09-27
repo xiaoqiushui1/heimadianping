@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.ScrollResult;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Blog;
 import com.hmdp.entity.Follow;
@@ -18,9 +19,11 @@ import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -81,7 +84,7 @@ if (top5 == null || top5.isEmpty()){
 //2.解析其中的用户id,之后根据用户id在mysql中查询用户的信息将其封装到集合userdto属性中
    List<Long> ids= top5.stream().map(Long::valueOf).collect(Collectors.toList());//转为Long之后存入list集合
         //List <Long> ids=new ArrayList<>();
-        //等价于for(String str :: top5){
+        //等价于for(String str : top5){
           //Long userId=Long.valueOf(str);
         //ids.add(userId)
         // }
@@ -139,7 +142,7 @@ if (top5 == null || top5.isEmpty()){
         List<Blog> records = page.getRecords();
         // 查询用户
         records.forEach(blog -> {
-           this.extracted(blog);//获取用户并赋值给博文的属性
+           this.queryBlogUser(blog);//获取用户并赋值给博文的属性
             this.isBlogLiked(blog);//判断是否点赞(这个步骤需要登录，要不获取不到userId)
         });//this指的是records
         return Result.ok(records);
@@ -147,9 +150,9 @@ if (top5 == null || top5.isEmpty()){
 // // 获取当前页数据
 //    List<Blog> records = page.getRecords();
 //
-//    // ========== 替换原来 records.forEach(this::extracted); ==========
+//    // ========== 替换原来 records.forEach(this::queryBlogUser); ==========
 //    for (Blog blog : records) {
-//        extracted(blog);
+//        queryBlogUser(blog);
 //    }
     @Override
     public Result queryBlogById(Long id) {// 查询单个博文
@@ -159,11 +162,61 @@ if (top5 == null || top5.isEmpty()){
             return Result.fail("笔记不存在");
         }
         //2.查询blog有关的用户
-        extracted(blog);
+        queryBlogUser(blog);
         //3.查询blog的点赞数量
         isBlogLiked(blog);
         return Result.ok(blog);
     }
+    //实现滚动分页查询
+
+    @Override
+    public Result querBlogofFollw(Long max, Integer offset) {
+        //1.获取当前用户
+        Long userId=UserHolder.getUser().getId();
+        //2.查询收件箱(滚动分页查询)ZREVERANGEYSCORE key Max Min limit offset 3  count
+        String Key=FEED_KEY +userId;
+        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet()
+                .reverseRangeByScoreWithScores(Key, 0, max, offset, 3);
+        //3.非空判断，解析数据
+        if (typedTuples ==null || typedTuples.isEmpty()){
+            //没有数据
+            return Result.ok("没有相关博文");
+        }
+        List<Long> ids=new ArrayList<>(typedTuples.size());//默认创建集合列表的初始空间大小为16,
+        // 所以默认为查询时的大小.
+        long minTime=0;
+        int os=1;
+        for(ZSetOperations.TypedTuple<String> tuple : typedTuples){
+            //3.1获取id
+            String idstr1=tuple.getValue();
+            Long idstr=Long.valueOf(idstr1);
+            ids.add(idstr);
+            //3.2获得时间戳
+       long time=tuple.getScore().longValue();//最后集合的元素肯定为时间戳最小的值。
+            if(time==minTime){
+                os++;
+            }else {
+                minTime= time;
+                os=1;
+            }
+        }//最后循环之后os就为offset的值
+        //4.根据id查询blog,并且封装好数据信息(查询作者以及是否点过赞)
+        String idstr=StrUtil.join(",",ids);
+     List<Blog> blogs=this.query()
+                .in("id",ids).last("ORDER BY FIELD(id," + idstr + ")").list();
+     for (Blog blog :blogs){
+         //4.1查询blog相关用户
+         queryBlogUser(blog);
+         //4.2查询blog是否被点赞
+         isBlogLiked(blog);
+
+     }
+        //5.封装数据并返回
+        ScrollResult r=new ScrollResult(blogs,minTime,os);//数据，最小时间（也就是最后一个查询的数据的时间戳），
+        // offset（和最后一个查询数据的时间戳相同的有几个）偏移量
+        return Result.ok(r);
+    }
+
     private void  isBlogLiked  (Blog blog) {
         if (UserHolder.getUser()==null){
             //用户未登录，无需查看是否点赞，但是可以看其他点赞 数
@@ -174,9 +227,8 @@ if (top5 == null || top5.isEmpty()){
         String key= BLOG_LIKED_KEY+blog.getId();
         Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());//必须要用tostring要不记录的是地址，找不到会报空
         blog.setIsLike(score !=null);//这个!=是运算符，最后自动生成布尔值.
-
     }
-    private void extracted(Blog blog) {//ctrl+alt+m可以封装一个函数
+    private void queryBlogUser(Blog blog) {//ctrl+alt+m可以封装一个函数
         Long userId = blog.getUserId();
         User user = userService.getById(userId);
         blog.setName(user.getNickName());

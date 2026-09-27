@@ -78,7 +78,11 @@ public class BlogController {
         List<Blog> records = page.getRecords();//分页数据, blogs
         return Result.ok(records);
     }
-
+//实现滚动分页的接口
+    @GetMapping("/of/follow")
+    public Result querBlogOfFollow(@RequestParam("lastId") Long max,@RequestParam(value = "offset",defaultValue = "0") Integer offset){
+        return blogService.querBlogofFollw(max,offset);
+    }
 
 
 }
