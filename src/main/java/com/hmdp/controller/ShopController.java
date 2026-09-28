@@ -10,6 +10,7 @@ import com.hmdp.utils.SystemConstants;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.security.cert.X509Certificate;
 
 /**
  * <p>
