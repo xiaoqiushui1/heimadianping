@@ -7,6 +7,7 @@ import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
+import com.hmdp.utils.simpleRedisLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
@@ -71,11 +72,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         // 2.创建锁对象
         RLock redisLock = redissonClient.getLock("lock:order:" + userId);
         // 3.尝试获取锁
-        boolean isLock = redisLock.tryLock();
+        boolean isLock = redisLock.tryLock();//尝试获取锁
         // 4.判断是否获得锁成功
         if (!isLock) {
             // 获取锁失败，直接返回失败或者重试
             log.error("不允许重复下单！");
+
             return;
         }
         try {
@@ -87,7 +89,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
     }
     @Override
-    @Transactional
+    @Transactional//使用事务是为了保证扣减库存与创建订单是原子性的。
     public void createVoucherOrder(VoucherOrder voucherOrder) {
         Long userId = voucherOrder.getUserId();
         // 5.1.查询订单
@@ -177,8 +179,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 //        //redisson 分布式锁对象
 //        RLock lock = redissonClient.getLock("lock:order:" + userId);
 //        //获取锁
-//        boolean islock= lock.tryLock();
-//   // boolean islock= simpleRedisLock.tryLock(1200);
+     //  boolean islock= lock.tryLock();
+ //boolean islock= simpleRedisLock.tryLock(1200);
 //    if(!islock){
 //        return Result.fail("请勿重复下单");
 //    }

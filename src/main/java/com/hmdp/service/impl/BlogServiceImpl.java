@@ -57,7 +57,10 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         //保存成功之后查询作者的粉丝列表查询之后保存到redis的sortset中
         if (isSuccess){//也可以用事务管理
             //3.查询语句 select * from  tb_follow where follows_user_id=?
-            List<Follow> zijifensiliebiaos = followService.query().eq("follow_user_id", user.getId()).list();
+            List<Follow> zijifensiliebiaos = followService.query().eq("follow_user_id", user.getId()).list();//(链式写法)
+            //LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<>();
+            //wrapper.eq(Follow::getFollowUserId, user.getId());
+            //List<Follow> list = followService.list(wrapper);(旧写法)
             //推送给所有粉丝
             for (Follow follow : zijifensiliebiaos) {
                 //4.1获取我的粉丝id
