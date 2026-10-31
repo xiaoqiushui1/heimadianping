@@ -25,7 +25,10 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/blog/hot",
                         "/blog/id",
                         "/user/code",
-                        "/user/login"//不需要拦截的路径
+                        "/user/login",//不需要拦截的路径
+                        //★ 联调案例一用的演示接口：故意做成"免登录"，好和案例二（必须登录）做对比。
+                        //  把这行注释掉再刷新页面，就会看到 401 —— 这就是白名单的作用。
+                        "/demo/**"
                 ).order(1);//确保后执行
 //刷新token拦截器
 registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
