@@ -13,6 +13,7 @@ import org.springframework.aop.framework.AopContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.PostConstruct;
@@ -32,11 +33,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private StringRedisTemplate stringRedisTemplate;
     @Resource
+    private KafkaTemplate kafkaTemplate;
+    @Resource
     private RedissonClient redissonClient;
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
-    //异步处理线程池
-    private static final ExecutorService SECKILL_ORDER_EXECUTOR = Executors.newSingleThreadExecutor();
-    private BlockingQueue<VoucherOrder> orderTasks = new ArrayBlockingQueue<>(1024 * 1024);
     private IVoucherOrderService proxy;
     static {
         SECKILL_SCRIPT = new DefaultRedisScript<>();
@@ -44,48 +44,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         SECKILL_SCRIPT.setResultType(Long.class);
     }
     //在类初始化之后执行，因为当这个类初始化好了之后，随时都是有可能要执行的
-    @PostConstruct
-    private void init() {
-        SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
-    }
-    private class VoucherOrderHandler implements Runnable {
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    //是在判断seckill.lua脚本之后进行获取的,所以这里获取的voucherorder信息已经封装了
-                    // 1.获取订单中的队列消息
-                    VoucherOrder voucherOrder = orderTasks.take();
-                    //2.创建订单
-                    handleVoucherOrder(voucherOrder);
-                } catch (Exception e) {
-                    log.error("处理订单异常:", e);
-                }
-            }
-        }
-    }
 
-    private void handleVoucherOrder(VoucherOrder voucherOrder) {
-        // 1.获取用户
-        Long userId = voucherOrder.getUserId();//因为是异步线程的操作，所以指南用voucherorder的方法获取用户id，这是在判断lua脚本之后进行的，voucherorder的信息以及封装了
-        // 2.创建锁对象
-        RLock redisLock = redissonClient.getLock("lock:order:" + userId);
-        // 3.尝试获取锁
-        boolean isLock = redisLock.tryLock();
-        // 4.判断是否获得锁成功
-        if (!isLock) {
-            // 获取锁失败，直接返回失败或者重试
-            log.error("不允许重复下单！");
-            return;
-        }
-        try {
-            //注意：由于是spring的事务是放在threadLocal中，此时的是多线程，事务会失效
-            proxy.createVoucherOrder(voucherOrder);
-        } finally {
-            // 释放锁
-            redisLock.unlock();
-        }
-    }
     @Override
     @Transactional
     public void createVoucherOrder(VoucherOrder voucherOrder) {
@@ -137,10 +96,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         voucherOrder.setUserId(userId);
         // 2.5.代金券id
         voucherOrder.setVoucherId(voucherId);
-        // 2.6.放入阻塞队列
-        orderTasks.add(voucherOrder);
-        //3.获取代理对象
-        proxy = (IVoucherOrderService) AopContext.currentProxy();
+        // 2.6.将优惠卷信息给生产者
+        kafkaTemplate.send("voucher-orders",voucherOrder);
         // 3.返回订单id
         return Result.ok(orderId);
     }
